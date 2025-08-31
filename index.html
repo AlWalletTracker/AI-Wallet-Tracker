@@ -1,380 +1,212 @@
 <!doctype html>
-<html lang="en">
-<head>
+<html><head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>GanatheExpTracker</title>
-<meta name="theme-color" content="#2b6cb0" />
 <link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#1f4f90" />
 <style>
-:root{--primary:#2b6cb0;--muted:#6b7280}
-*{box-sizing:border-box}body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial;margin:0}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--primary);color:#fff}
-.btn{border:1px solid #ccc;background:#fff;padding:8px 12px;border-radius:6px;cursor:pointer}
-.btn.primary{background:#064e8a;color:#fff;border:none}
+:root{--primary:#1f4f90;--bg:#f7fafc;--text:#0f172a;--muted:#6b7280;--card:#ffffff}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial}
+.topbar{position:sticky;top:0;display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--primary);color:#fff}
+nav a{margin-right:10px;color:#fff;text-decoration:none;font-weight:600;opacity:.95}
+nav a.active{text-decoration:underline}
+.btn{border:1px solid #cbd5e1;background:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+.btn.primary{background:#0b63ce;color:#fff;border:none}
 .btn.small{padding:4px 8px;font-size:12px}
-main{padding:16px;max-width:980px;margin:0 auto}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:12px 0}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+main{padding:16px;max-width:1100px;margin:0 auto}
+.card{background:var(--card);border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 label{display:flex;flex-direction:column;gap:6px;font-size:14px}
-input,select,textarea{padding:10px;border:1px solid #d1d5db;border-radius:8px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #eee;font-size:14px}
+input,select,textarea{padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#fff}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{padding:8px;border-bottom:1px solid #eee;font-size:14px;text-align:left}
 .banner{background:#fef3c7;border:1px solid #fde68a;padding:8px 12px;border-radius:8px;margin-bottom:8px}
-.hidden{display:none}
-.muted{color:var(--muted);font-size:12px}
-.smalltxt{font-size:12px;color:#666}
+.hidden{display:none} .muted{color:var(--muted);font-size:12px}
+.userbox span{background:rgba(255,255,255,.2);padding:4px 8px;border-radius:6px}
 </style>
-
-<!-- Firebase + Chart.js (CDNs) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
 </head>
 <body>
-  <header class="topbar">
-    <h1 style="font-size:18px;margin:0">GanatheExpTracker</h1>
-    <div id="userBox">
-      <span id="userEmail" class="smalltxt"></span>
-      <button id="btnLogin" class="btn primary">Sign in with Google</button>
-      <button id="btnLogout" class="btn hidden">Logout</button>
+<header class="topbar">
+  <div style="display:flex;align-items:center;gap:12px">
+    <strong>GanatheExpTracker</strong>
+    <nav id="nav" class="hidden">
+      <a href="#/dashboard" id="nav-dashboard">Dashboard</a>
+      <a href="#/transactions" id="nav-trans">Transactions</a>
+      <a href="#/payments" id="nav-payments">Payments</a>
+      <a href="#/trips" id="nav-trips">Trips</a>
+      <a href="#/analytics" id="nav-analytics">Analytics</a>
+      <a href="#/admin" id="nav-admin" class="hidden">Admin</a>
+    </nav>
+  </div>
+  <div class="userbox">
+    <span id="userEmail">Not signed in</span>
+    <button id="btnLogin" class="btn primary">Sign in with Google</button>
+    <button id="btnLogout" class="btn hidden">Logout</button>
+  </div>
+</header>
+
+<main>
+  <section id="loginCard" class="card">
+    <h2>Welcome</h2>
+    <p>Sign in to continue. <strong>Only Google Sign-In is supported.</strong></p>
+    <button id="btnLogin2" class="btn primary">Sign in with Google</button>
+  </section>
+
+  <section id="alertBar" class="banner hidden"></section>
+
+  <section id="page-dashboard" class="card hidden">
+    <h2>Dashboard</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Add Transaction</h3>
+        <form id="txForm">
+          <div class="grid2">
+            <label>Date <input type="date" id="txDate" required /></label>
+            <label>Type
+              <select id="txType"><option value="expense">Expense</option><option value="revenue">Revenue</option></select>
+            </label>
+            <label>Category
+              <select id="txCategory">
+                <option>Food/EatOut</option><option>Grocery</option><option>Apparel</option><option>Devotional</option><option>Travel</option><option>Misc/Others</option>
+              </select>
+            </label>
+            <label>Amount ₹ <input type="number" id="txAmount" step="0.01" required /></label>
+            <label>Payment <select id="txPayment"></select></label>
+            <label>Trip <select id="txTrip"><option value="">— None —</option></select></label>
+          </div>
+          <label>Description <input id="txDesc" /></label>
+          <label>Comments <input id="txComments" /></label>
+          <label>Receipt <input type="file" id="txReceiptFile" accept="image/*,application/pdf" /></label>
+          <div style="margin-top:8px"><button class="btn primary" type="submit">Save</button></div>
+          <div id="saveMsg" class="muted"></div>
+        </form>
+      </div>
+      <div class="card"><h3>Spends by Category</h3><canvas id="chartCat"></canvas></div>
     </div>
-  </header>
+    <div class="card">
+      <h3>Recent</h3>
+      <table id="txTable"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>₹</th><th>Payment</th><th>User</th><th>Trip</th></tr></thead><tbody id="txTbody"></tbody></table>
+    </div>
+  </section>
 
-  <main>
-    <section id="adminBanner" class="banner hidden">
-      Admin mode • <button id="toggleDev" class="btn small">Dev: <span id="devState">OFF</span></button>
-    </section>
+  <section id="page-transactions" class="card hidden">
+    <h2>Transactions</h2>
+    <p class="muted">Your full list. Admin sees all.</p>
+    <table id="allTable"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Payment</th><th>User</th><th>Trip</th></tr></thead><tbody id="allTbody"></tbody></table>
+  </section>
 
-    <section class="card" id="dashboard" style="display:none">
-      <h2 id="dashboardTitle">Dashboard</h2>
-      <div id="adminControls" class="hidden">
-        <h3>Invite / Manage Users</h3>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="inviteEmail" placeholder="user@example.com" />
-          <button id="inviteBtn" class="btn">Invite</button>
-        </div>
-        <div id="inviteMsg" class="smalltxt muted"></div>
+  <section id="page-payments" class="card hidden">
+    <h2>Payment Modes</h2>
+    <p class="muted">Manage your own payment methods. (Credit Card limit, UPI, Bank, Cash, etc).</p>
+    <form id="pmForm" class="grid2">
+      <label>Type
+        <select id="pmType"><option>Credit Card</option><option>Debit Card</option><option>Bank Account</option><option>UPI</option><option>Cash</option></select>
+      </label>
+      <label>Details <input id="pmDetails" placeholder="Last 4 digits / UPI handle / Bank name" /></label>
+      <label>Limit (for CC) <input type="number" id="pmLimit" step="1" /></label>
+      <button class="btn" id="pmAddBtn" type="button">Add/Update</button>
+    </form>
+    <div class="card">
+      <h3>My Payment Modes</h3>
+      <table id="pmTable"><thead><tr><th>Type</th><th>Details</th><th>Limit</th></tr></thead><tbody id="pmTbody"></tbody></table>
+    </div>
+  </section>
+
+  <section id="page-trips" class="card hidden">
+    <h2>Trips</h2>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input id="tripName" placeholder="Trip name (e.g., Goa 2025)" />
+      <button id="tripAddBtn" class="btn">Create Trip</button>
+    </div>
+    <table id="tripTable"><thead><tr><th>Name</th><th>Created</th></tr></thead><tbody id="tripTbody"></tbody></table>
+  </section>
+
+  <section id="page-analytics" class="card hidden">
+    <h2>Analytics</h2>
+    <div class="grid2">
+      <div class="card"><h3>By Day of Week</h3><canvas id="chartDow"></canvas></div>
+      <div class="card"><h3>By Category</h3><canvas id="chartCat2"></canvas></div>
+    </div>
+  </section>
+
+  <section id="page-admin" class="card hidden">
+    <h2>Admin</h2>
+    <div class="banner">Only Google Sign-In supported. Admin-only invite below.</div>
+    <div class="card">
+      <h3>Invite Users</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="inviteEmail" placeholder="user@example.com" />
+        <button id="inviteBtn" class="btn">Invite</button>
       </div>
+      <div id="inviteMsg" class="muted"></div>
+    </div>
+    <div class="card">
+      <h3>Demo Mode</h3>
+      <button id="demoToggle" class="btn small">Toggle Demo</button>
+      <span id="demoState" class="muted">OFF</span>
+    </div>
+  </section>
+</main>
 
-      <h3>Create Trip</h3>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        <input id="tripName" placeholder="Trip name (eg. Goa 2025)" />
-        <button id="addTripBtn" class="btn">Create Trip</button>
-      </div>
-
-      <h3>Add Transaction</h3>
-      <form id="txForm">
-        <div class="grid2">
-          <label>Date <input type="date" id="txDate" required /></label>
-          <label>Type
-            <select id="txType"><option value="expense">Expense</option><option value="revenue">Revenue</option></select>
-          </label>
-          <label>Category
-            <select id="txCategory">
-              <option>Food/EatOut</option><option>Grocery</option><option>Apparel</option><option>Devotional</option><option>Travel</option><option>Misc/Others</option>
-            </select>
-          </label>
-          <label>Amount ₹ <input type="number" id="txAmount" step="0.01" required /></label>
-          <label>Payment
-            <select id="txPayment"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Credit Card</option><option>Debit Card</option></select>
-          </label>
-          <label>Trip
-            <select id="txTrip"><option value="">— None —</option></select>
-          </label>
-        </div>
-        <label>Description <input id="txDesc" /></label>
-        <label>Comments <input id="txComments" /></label>
-        <label>Receipt (file) <input type="file" id="txReceiptFile" accept="image/*,application/pdf" /></label>
-        <div style="margin-top:8px"><button class="btn primary" type="submit">Save</button></div>
-      </form>
-      <div id="saveMsg" class="muted"></div>
-
-      <h3>Recent Transactions</h3>
-      <table id="txTable"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Payment</th><th>User</th><th>Trip</th></tr></thead><tbody id="txTbody"></tbody></table>
-
-      <h3>Analytics</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <canvas id="chartByCat"></canvas>
-        <canvas id="chartByDow"></canvas>
-      </div>
-
-    </section>
-
-    <section id="landing" class="card">
-      <h2>Welcome</h2>
-      <p class="smalltxt">Sign in with Google to start tracking expenses. Admin (jayaprakashinzoom@gmail.com) is pre-authorized and will land on the family dashboard.</p>
-    </section>
-  </main>
-
-  <footer style="padding:12px;text-align:center" class="smalltxt muted">PWA (offline-first). Data syncs to Google Sheets when online.</footer>
-
-<!-- Manifest & service-worker (minimal) -->
 <script>
-const APP_MANIFEST = {
-  name: "GanatheExpTracker",
-  short_name: "GExp",
-  start_url: ".",
-  display: "standalone",
-  background_color: "#ffffff",
-  theme_color: "#2b6cb0",
-  icons: []
-};
-</script>
-
-<!-- CONFIG: Edit only APPS_SCRIPT_URL after Apps Script deploy -->
-<script>
-/* ====== SETTINGS (one place to edit after Apps Script deploy) ====== */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDnPEdA7jaixzb4_EItWQcjExmYOElhT3c",
-  authDomain: "ganatheexptracker-ca460.firebaseapp.com",
-  projectId: "ganatheexptracker-ca460",
-  storageBucket: "ganatheexptracker-ca460.firebasestorage.app",
-  messagingSenderId: "60830031455",
-  appId: "1:60830031455:web:9c32ef5060736e5de805ea"
-};
+const FIREBASE_CONFIG = {"apiKey": "AIzaSyDnPEdA7jaixzb4_EItWQcjExmYOElhT3c", "authDomain": "ganatheexptracker-ca460.firebaseapp.com", "projectId": "ganatheexptracker-ca460", "storageBucket": "ganatheexptracker-ca460.firebasestorage.app", "messagingSenderId": "60830031455", "appId": "1:60830031455:web:9c32ef5060736e5de805ea"};
 const SHEET_ID = "1rf4wiZD-VLpJJV02A5IA9tNHCjZCtck723WGg-7zuxc";
-let APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysENxg3hPH8EYwu5hu-Xs65a0k2K1iVFgFyTG0PPh_alnfVoylR9Soj_rV5OjSOZFp/exec"; // <-- set this after you deploy Apps Script (exact string)
-const INITIAL_ADMIN_EMAIL = "jayaprakashinzoom@gmail.com";
-const DEV_MODE_SUFFIX = "_dev";
-/* ================================================================= */
-</script>
+let APPS_SCRIPT_URL = "REPLACE_WITH_YOUR_APPS_SCRIPT_WEBAPP_URL";
+const ADMIN_EMAIL = "jayaprakashinzoom@gmail.com";
 
-<!-- light IndexedDB helper -->
-<script>
-const IDB_HELPER = (function(){
-  const DB = 'gexp_db_v1';
-  function openDB(dev=false){
-    return new Promise((res,rej)=>{
-      const req = indexedDB.open(dev?DB+DEV:DB,1);
-      req.onupgradeneeded = ()=> {
-        const db = req.result;
-        if(!db.objectStoreNames.contains('tx')) {
-          const s = db.createObjectStore('tx',{keyPath:'id'});
-          s.createIndex('byUpdated','updatedAt');
-        }
-      };
-      req.onsuccess = ()=> res(req.result);
-      req.onerror = ()=> rej(req.error);
-    });
-  }
-  async function put(dev, obj){
-    const db = await openDB(dev);
-    return new Promise((res, rej)=>{
-      const tx = db.transaction('tx','readwrite').objectStore('tx').put(obj);
-      tx.onsuccess = ()=> res();
-      tx.onerror = ()=> rej(tx.error);
-    });
-  }
-  async function all(dev){
-    const db = await openDB(dev);
-    return new Promise((res,rej)=>{
-      const r = db.transaction('tx').objectStore('tx').getAll();
-      r.onsuccess = ()=> res(r.result||[]);
-      r.onerror = ()=> rej(r.error);
-    });
-  }
-  return { put, all };
-})();
-</script>
-
-<!-- Main app logic -->
-<script>
 firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const provider = new firebase.auth.GoogleAuthProvider();
 
-const el = id => document.getElementById(id);
-let state = { user:null, isAdmin:false, dev:false, tx:[], trips:[] };
+const S = { user:null, isAdmin:false, demo:false, tx:[], payments:[], trips:[] };
+const $ = id => document.getElementById(id);
+const PAGES = ["dashboard","transactions","payments","trips","analytics","admin"];
+function show(id, flag){ $(id).classList.toggle('hidden', !flag); }
+function setActive(tabId){ for (const p of PAGES) document.getElementById('nav-'+p)?.classList.remove('active'); document.getElementById('nav-'+tabId)?.classList.add('active'); }
+function route(){ const h = (location.hash||'#/dashboard').replace('#/',''); for (const p of PAGES) show('page-'+p, p===h); setActive(h); }
+window.addEventListener('hashchange', route);
 
-const btnLogin = el('btnLogin'), btnLogout = el('btnLogout'), userEmail = el('userEmail');
-const dashboard = el('dashboard'), landing = el('landing'), dashboardTitle = el('dashboardTitle');
-const adminControls = el('adminControls'), inviteBtn = el('inviteBtn'), inviteEmail = el('inviteEmail'), inviteMsg = el('inviteMsg');
-const addTripBtn = el('addTripBtn'), tripName = el('tripName'), txTrip = el('txTrip');
-const txForm = el('txForm'), txTbody = el('txTbody'), saveMsg = el('saveMsg');
-const chartByCat = new Chart(document.getElementById('chartByCat'), {type:'doughnut', data:{labels:[],datasets:[{data:[]}]}} );
-const chartByDow = new Chart(document.getElementById('chartByDow'), {type:'bar', data:{labels:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],datasets:[{data:[0,0,0,0,0,0,0]}]}} );
+$('btnLogin').onclick = ()=> auth.signInWithPopup(provider);
+$('btnLogin2').onclick = ()=> auth.signInWithPopup(provider);
+$('btnLogout').onclick = ()=> auth.signOut();
 
-btnLogin.onclick = ()=> auth.signInWithPopup(provider);
-btnLogout.onclick = ()=> auth.signOut();
+auth.onAuthStateChanged(async (u)=>{ S.user=u; $('userEmail').textContent = u?u.email:'Not signed in'; show('btnLogout', !!u); $('btnLogin').style.display=u?'none':'inline-block'; show('loginCard', !u); show('nav', !!u); if(!u) return; S.isAdmin=(u.email===ADMIN_EMAIL); document.getElementById('nav-admin').classList.toggle('hidden', !S.isAdmin); if(location.hash===''||location.hash==='#') location.hash='#/dashboard'; route(); await initialLoad(); });
 
-auth.onAuthStateChanged(async (u)=>{
-  state.user = u;
-  el('userEmail').textContent = u ? u.email : '';
-  btnLogin.style.display = u ? 'none' : 'inline-block';
-  btnLogout.classList.toggle('hidden', !u);
-  state.isAdmin = u && u.email === INITIAL_ADMIN_EMAIL;
-  adminControls.classList.toggle('hidden', !state.isAdmin);
-  if(u) {
-    landing.style.display = 'none';
-    dashboard.style.display = 'block';
-    dashboardTitle.textContent = state.isAdmin ? 'Family Dashboard (Admin)' : 'My Dashboard';
-    await loadLocal();
-    if(navigator.onLine) await pushAndPull();
-    // admin goes straight to dashboard (already here)
-  } else {
-    landing.style.display = 'block';
-    dashboard.style.display = 'none';
-  }
-});
+async function initialLoad(){ await pullAll(); renderAll(); }
 
-el('toggleDev').onclick = ()=> { state.dev = !state.dev; el('devState').textContent = state.dev ? 'ON':'OFF'; loadLocal(); };
+function renderAll(){ renderTxTables(); renderCharts(); renderPayments(); renderTrips(); }
 
-txForm.addEventListener('submit', async (e)=> {
-  e.preventDefault();
-  if(!state.user){ alert('Sign in first'); return; }
-  const now = new Date().toISOString();
-  const tx = {
-    id: 'tx_'+Math.random().toString(36).slice(2),
-    createdAt: now,
-    updatedAt: now,
-    userEmail: state.user.email,
-    date: el('txDate').value || new Date().toISOString().slice(0,10),
-    type: el('txType').value,
-    category: el('txCategory').value,
-    amount: Number(el('txAmount').value||0),
-    payment: el('txPayment').value,
-    trip: el('txTrip').value || '',
-    description: el('txDesc').value,
-    comments: el('txComments').value,
-  };
-  // optionally upload receipt file via Apps Script endpoint
-  const fileInput = el('txReceiptFile');
-  if(fileInput.files && fileInput.files[0] && APPS_SCRIPT_URL && !APPS_SCRIPT_URL.startsWith('REPLACE')){
-    try {
-      const file = fileInput.files[0];
-      const b64 = await toBase64(file);
-      const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'uploadReceipt', filename:file.name, mimeType:file.type, data:b64, userEmail: state.user.email })});
-      const j = await resp.json();
-      if(j && j.success && j.url) tx.receiptUrl = j.url;
-    } catch(e){ console.warn('receipt upload failed', e); }
-  }
+function renderTxTables(){ const mineOnly=!S.isAdmin; const rows=(S.tx||[]).filter(r=> mineOnly ? r.userEmail===(S.user&&S.user.email) : true).sort((a,b)=> new Date(b.date)-new Date(a.date)); const tbody1=$('txTbody'); tbody1.innerHTML=''; rows.slice(0,50).forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.date}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount}</td><td>${r.payment}</td><td>${r.userEmail}</td><td>${r.trip||''}</td>`; tbody1.appendChild(tr); }); const tbody2=$('allTbody'); tbody2.innerHTML=''; rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.date}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount}</td><td>${r.payment}</td><td>${r.userEmail}</td><td>${r.trip||''}</td>`; tbody2.appendChild(tr); }); }
 
-  await IDB_HELPER.put(state.dev, tx);
-  saveMsg.textContent = 'Saved locally' + (navigator.onLine ? ' and syncing...' : '');
-  await loadLocal();
-  if(navigator.onLine) await pushAndPull();
-  txForm.reset();
-});
+let chartCat, chartDow, chartCat2;
+function renderCharts(){ const mineOnly=!S.isAdmin; const agg={}; const dow=[0,0,0,0,0,0,0]; for(const r of (S.tx||[])){ if(mineOnly && r.userEmail!==(S.user&&S.user.email)) continue; const amt=Number(r.amount||0); if(r.type==='expense'){ agg[r.category]=(agg[r.category]||0)+amt; dow[new Date(r.date).getDay()]+=amt; } } const catLabels=Object.keys(agg), catData=Object.values(agg); if(!chartCat) chartCat=new Chart(document.getElementById('chartCat'), {type:'doughnut', data:{labels:[],datasets:[{data:[]}]}}); chartCat.data.labels=catLabels; chartCat.data.datasets[0].data=catData; chartCat.update(); if(!chartDow) chartDow=new Chart(document.getElementById('chartDow'), {type:'bar', data:{labels:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],datasets:[{data:[0,0,0,0,0,0,0]}]}}); chartDow.data.datasets[0].data=dow; chartDow.update(); if(!chartCat2) chartCat2=new Chart(document.getElementById('chartCat2'), {type:'pie', data:{labels:[],datasets:[{data:[]}]}}); chartCat2.data.labels=catLabels; chartCat2.data.datasets[0].data=catData; chartCat2.update(); }
 
-async function toBase64(file){
-  return new Promise((res,rej)=>{
-    const reader = new FileReader();
-    reader.onload = ()=> res(String(reader.result).split(',')[1]);
-    reader.onerror = ()=> rej(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
+function renderPayments(){ const tbody=$('pmTbody'); tbody.innerHTML=''; (S.payments||[]).filter(p=> p.user===(S.user&&S.user.email)).forEach(p=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${p.type}</td><td>${p.details||''}</td><td>${p.limit||''}</td>`; tbody.appendChild(tr); }); }
 
-async function loadLocal(){
-  state.tx = await IDB_HELPER.all(state.dev);
-  render();
-  // populate trips list
-  const trips = (state.trips || []);
-  txTrip.innerHTML = '<option value="">— None —</option>';
-  for(const t of trips) {
-    const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.name; txTrip.appendChild(opt);
-  }
-}
+function renderTrips(){ const tbody=$('tripTbody'); tbody.innerHTML=''; (S.trips||[]).forEach(t=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${t.tripName}</td><td>${t.createdAt||''}</td>`; tbody.appendChild(tr); }); const sel=$('txTrip'); sel.innerHTML='<option value="">— None —</option>'; (S.trips||[]).forEach(t=>{ const o=document.createElement('option'); o.value=t.tripId; o.textContent=t.tripName; sel.appendChild(o); }); }
 
-function render(){
-  txTbody.innerHTML = '';
-  const mineOnly = !state.isAdmin;
-  const rows = (state.tx||[]).filter(r => mineOnly ? r.userEmail === (state.user && state.user.email) : true).sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,200);
-  for(const r of rows){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.date}</td><td>${r.type}</td><td>${r.category}</td><td>${r.amount}</td><td>${r.payment}</td><td>${r.userEmail}</td><td>${r.trip||''}</td>`;
-    txTbody.appendChild(tr);
-  }
-  // charts
-  const agg = {};
-  const dow = [0,0,0,0,0,0,0];
-  for(const r of (state.tx||[])){
-    if(mineOnly && r.userEmail !== (state.user && state.user.email)) continue;
-    if(r.type === 'expense'){
-      agg[r.category] = (agg[r.category]||0) + Number(r.amount||0);
-      const d = new Date(r.date); dow[d.getDay()] += Number(r.amount||0);
-    }
-  }
-  chartByCat.data.labels = Object.keys(agg); chartByCat.data.datasets[0].data = Object.values(agg); chartByCat.update();
-  chartByDow.data.datasets[0].data = dow; chartByDow.update();
-}
+document.getElementById('txForm').addEventListener('submit', async (e)=>{ e.preventDefault(); if(!S.user) return alert('Sign in first'); const tx={ id:'tx_'+Math.random().toString(36).slice(2), userEmail:S.user.email, date:$('txDate').value || new Date().toISOString().slice(0,10), type:$('txType').value, category:$('txCategory').value, amount:Number($('txAmount').value||0), payment:$('txPayment').value, description:$('txDesc').value, comments:$('txComments').value, trip:$('txTrip').value || '', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() }; const file=document.getElementById('txReceiptFile').files[0]; if(file && APPS_SCRIPT_URL && !APPS_SCRIPT_URL.startsWith('REPLACE')){ try{ const b64=await toBase64(file); const r=await fetch(APPS_SCRIPT_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'uploadReceipt',filename:file.name,mimeType:file.type,data:b64,userEmail:S.user.email})}); const j=await r.json(); if(j.success && j.url) tx.receiptUrl=j.url; }catch(e){ console.warn('upload failed', e); } } await apiPost('push', { rows:[tx] }); $('saveMsg').textContent='Saved to Google Sheet.'; await pullAll(); renderAll(); e.target.reset(); });
 
-// Invite (calls Apps Script invite endpoint)
-inviteBtn.onclick = async ()=>{
-  const em = inviteEmail.value && inviteEmail.value.trim();
-  if(!em){ inviteMsg.textContent = 'Enter email'; return; }
-  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.startsWith('REPLACE')){ inviteMsg.textContent = 'Deploy Apps Script first and set URL in file.'; return; }
-  try{
-    const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'invite', email: em, admin: state.user && state.user.email })});
-    const j = await resp.json();
-    if(j && j.success){ inviteMsg.textContent = 'Invited — added to whitelist.'; inviteEmail.value=''; }
-    else inviteMsg.textContent = 'Invite failed: '+(j.error||'unknown');
-  }catch(e){ inviteMsg.textContent = 'Invite error'; console.warn(e); }
-};
+$('pmAddBtn').onclick = async ()=>{ if(!S.user) return alert('Sign in first'); const obj={ user:S.user.email, type:$('pmType').value, details:$('pmDetails').value, limit:$('pmLimit').value }; await apiPost('upsertPayment', obj); await pullAll(); renderPayments(); };
 
-// Create trip locally + push
-addTripBtn.onclick = async ()=>{
-  const name = tripName.value && tripName.value.trim();
-  if(!name) return alert('Enter trip name');
-  const t = { id:'trip_'+Math.random().toString(36).slice(2), name, createdAt: new Date().toISOString() };
-  state.trips = state.trips || []; state.trips.push(t);
-  populateTripsToSheet(); // push to apps script if available
-  tripName.value = '';
-  await loadLocal();
-};
+$('tripAddBtn').onclick = async ()=>{ if(!S.user) return alert('Sign in first'); const name=$('tripName').value.trim(); if(!name) return; const obj={ tripId:'trip_'+Math.random().toString(36).slice(2), tripName:name, createdAt:new Date().toISOString() }; await apiPost('upsertTrips', { trips:[obj] }); await pullAll(); renderTrips(); $('tripName').value=''; };
 
-async function populateTripsToSheet(){
-  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.startsWith('REPLACE')) return;
-  try{
-    await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'upsertTrips', trips: state.trips })});
-  }catch(e){ console.warn('trip push failed', e); }
-}
+$('inviteBtn').onclick = async ()=>{ const em=$('inviteEmail').value.trim(); if(!em) return; if(!S.isAdmin) return alert('Admin only'); const j=await apiPost('invite', { email:em, admin:S.user.email }); $('inviteMsg').textContent = j.success ? 'Invited (added to whitelist)' : ('Invite failed: '+(j.error||'')); };
 
-// Sync with Apps Script (push local rows, pull latest)
-async function pushAndPull(){
-  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.startsWith('REPLACE')) { console.log('Apps Script URL not set'); return; }
-  try{
-    // push
-    await (async ()=>{
-      const rows = state.tx || [];
-      await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'push', rows })});
-    })();
-    // pull
-    const q = new URLSearchParams({ action:'pull', email: state.user ? state.user.email : '' });
-    const res = await fetch(APPS_SCRIPT_URL + '?' + q.toString());
-    const j = await res.json();
-    if(j && j.success){
-      // merge remote into local DB
-      const remote = j.rows || [];
-      for(const r of remote){
-        await IDB_HELPER.put(state.dev, r);
-      }
-      state.trips = j.trips || [];
-      await loadLocal();
-    } else {
-      if(j && j.error && /Not authorized/i.test(j.error)) alert('Not authorized: ask admin to invite you.');
-    }
-  }catch(e){ console.warn('sync error', e); }
-}
+$('demoToggle').onclick = async ()=>{ const j=await apiPost('toggleDemo', {}); $('demoState').textContent=(j.demo?'ON':'OFF'); await pullAll(); renderAll(); };
 
-// Initial load local
-async function initLocal(){
-  state.tx = await IDB_HELPER.all(state.dev);
-  render();
-}
-initLocal();
+async function toBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=> res(String(r.result).split(',')[1]); r.onerror=()=> rej(r.error); r.readAsDataURL(file); }); }
 
-// service worker registration (if hosted) - dynamic small sw
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').catch(()=>console.log('sw failed'));
-}
+async function pullAll(){ const j=await apiGet('pull', { email:(S.user?S.user.email:'') }); if(j&&j.success){ S.tx=j.rows||[]; S.trips=j.trips||[]; S.payments=j.payments||[]; $('demoState').textContent=j.demo?'ON':'OFF'; const sel=$('txPayment'); sel.innerHTML=''; const mine=(S.payments||[]).filter(p=> p.user===(S.user&&S.user.email)); const defaults=['Cash','UPI','Bank Transfer','Credit Card','Debit Card']; const list=(mine.length?mine:defaults.map(x=>({type:x,details:'',limit:''}))); list.forEach(p=>{ const o=document.createElement('option'); o.textContent=p.type; sel.appendChild(o); }); } }
+
+async function apiGet(action, params={}){ if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.startsWith('REPLACE')){ banner('Deploy Apps Script and set APPS_SCRIPT_URL in index.html'); return {success:false}; } const qs=new URLSearchParams(Object.assign({action}, params)).toString(); const r=await fetch(APPS_SCRIPT_URL + '?' + qs); return r.json(); }
+async function apiPost(action, body={}){ if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.startsWith('REPLACE')){ banner('Deploy Apps Script and set APPS_SCRIPT_URL in index.html'); return {success:false}; } const r=await fetch(APPS_SCRIPT_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({action}, body))}); return r.json(); }
+function banner(msg){ const el=document.getElementById('alertBar'); el.textContent=msg; el.classList.remove('hidden'); setTimeout(()=> el.classList.add('hidden'), 6000); }
+
+route();
 </script>
-
-<!-- Minimal service worker file content (create file sw.js in repo if you want caching) -->
-<!-- For single-file GitHub Paste just ignore; if deploying to Pages add sw.js with caching rules -->
-
-<!-- end of file -->
-</body>
-</html>
+</body></html>
